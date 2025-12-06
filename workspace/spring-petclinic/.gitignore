@@ -1,0 +1,26 @@
+# ALM 状态文件（由系统自动生成和管理）
+.alm-state.json
+
+# 源代码目录（git clone的结果）
+source/
+
+# 构建产物
+build/
+*.jar
+*.war
+target/
+
+# 部署相关
+deploy/.terraform/
+deploy/.terraform.lock.hcl
+deploy/terraform.tfstate
+deploy/terraform.tfstate.backup
+
+# 其他资产
+assets/
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
+

@@ -1,0 +1,86 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+server
+asset_management
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+node_modules/
+
+# Go workspace file
+go.work
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.jar
+*.war
+*.class
+target/
+build/
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+# 工作空间下的状态文件和生成文件
+workspace/*/.alm-state.json
+workspace/*/source/
+workspace/*/build/
+workspace/*/deploy/.terraform/
+workspace/*/deploy/.terraform.lock.hcl
+workspace/*/deploy/terraform.tfstate
+workspace/*/deploy/terraform.tfstate.backup
+workspace/*/assets/
+
+# Frontend build output (保留源码，忽略构建产物)
+web/dist/
+web/node_modules/
+
+# 但保留 workspace 下的配置文件
+!workspace/*/asset.yaml
+!workspace/*/README.md
+!workspace/*/.gitignore
+!workspace/*/deploy/main.tf
+!workspace/*/deploy/README.md
+

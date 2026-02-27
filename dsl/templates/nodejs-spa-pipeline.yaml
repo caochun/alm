@@ -1,0 +1,48 @@
+kind: AppPipeline
+name: nodejs-spa-pipeline
+description: Node.js 单页应用构建流水线，产出可部署的静态资源包
+
+stages:
+  - id: source-code
+    name: 获取源码
+    produces: source-code
+    action:
+      type: tool
+      command: git
+      args:
+        - clone
+        - "${repository}"
+        - "${outputDir}"
+      parameters:
+        repository: ""
+        outputDir: ""
+
+  - id: npm-deps
+    name: 安装依赖
+    requires:
+      - source-code
+    produces: npm-deps
+    action:
+      type: tool
+      command: npm
+      args:
+        - install
+      parameters:
+        workDir: ""
+
+  - id: static-bundle
+    name: 构建静态资源
+    requires:
+      - npm-deps
+    produces: static-bundle
+    action:
+      type: tool
+      command: npm
+      args:
+        - run
+        - build
+      parameters:
+        workDir: ""
+
+deliverables:
+  - static-bundle

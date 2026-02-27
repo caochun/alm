@@ -1,0 +1,57 @@
+kind: AppPipeline
+name: java-webapp-pipeline
+description: Java Web 应用标准构建流水线，支持 Maven 构建和 Docker 镜像打包
+
+stages:
+  - id: source-code
+    name: 获取源码
+    produces: source-code
+    action:
+      type: tool
+      command: git
+      args:
+        - clone
+        - "${repository}"
+        - "${outputDir}"
+      parameters:
+        repository: ""
+        outputDir: ""
+
+  - id: jar-file
+    name: Maven 构建
+    requires:
+      - source-code
+    produces: jar-file
+    action:
+      type: tool
+      command: mvn
+      args:
+        - clean
+        - package
+        - -DskipTests
+      parameters:
+        workDir: ""
+
+  - id: docker-image
+    name: Docker 镜像打包
+    requires:
+      - jar-file
+    produces: docker-image
+    action:
+      type: tool
+      command: docker
+      args:
+        - build
+        - -t
+        - "${imageName}:${imageTag}"
+        - .
+      parameters:
+        imageName: ""
+        imageTag: latest
+        buildContext: ""
+
+# Pipeline 可以在任意 deliverable 处停止；
+# 部署环境通过 accepts 字段声明需要哪种形态。
+deliverables:
+  - jar-file
+  - docker-image

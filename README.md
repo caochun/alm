@@ -1,417 +1,283 @@
-# ALM - 应用生命周期管理系统
+# ALM — 应用生命周期管理系统
 
-一个用于管理企业第三方软件系统生命周期的平台。
+ALM（Application Lifecycle Management）是一个面向企业的应用生命周期管理平台，通过 DSL 驱动的方式将应用从源码到生产部署的全过程标准化、可配置化。
+
+---
+
+## 设计目标
+
+企业中管理大量第三方和内部软件系统时，面临两类核心诉求：
+
+1. **应用开发者**：如何将代码从仓库变成可以交付的制品（JAR、Docker 镜像、静态包），流程是否可标准化、可复用？
+2. **基础设施运营者**：如何为制品提供运行所需的计算资源和支撑服务（数据库、缓存、消息队列、Ingress），如何定义资源规格、如何供给这些基础设施？
+
+ALM 的目标是：**用 DSL 将这两类关注点分离建模，并由引擎统一编排执行**。
+
+---
 
 ## 设计理念
 
-### 1. 领域驱动设计（DDD）
+### Stakeholder 驱动的关注点分离
 
-ALM采用领域驱动设计思想，将软件资产的生命周期管理抽象为领域模型：
-
-- **SoftwareAsset（软件资产）**：聚合根，代表一个完整的软件系统，包含当前状态、具体资产和转换历史
-- **StateMachineTemplate（状态机模板）**：定义软件资产可能经历的状态和状态转换规则
-- **ConcreteAsset（具体资产）**：在生命周期各阶段产生的具体产物（源代码、构建产物、运行容器等）
-- **StateTransition（状态转换）**：记录状态转换的完整历史，包括执行的动作、条件和结果
-
-### 2. 状态机驱动
-
-系统通过状态机来管理软件资产的生命周期：
-
-- **可定制性**：通过DSL定义不同类型应用的状态机模板
-- **规则验证**：状态转换前验证转换规则和前置条件
-- **资产依赖**：明确每个状态转换的输入资产和输出资产，形成完整的依赖链
-- **历史追溯**：完整记录所有状态转换历史，支持审计和回滚
-
-### 3. DSL配置化
-
-通过YAML DSL定义状态机模板，实现配置与代码分离：
-
-- **状态定义**：定义生命周期中的各个状态及其期望的资产类型
-- **转换规则**：定义状态间的转换条件、所需动作和生成的资产类型
-- **动作定义**：定义工具动作（如git-clone、maven-build）和手动动作
-- **资产类型**：定义资产类型的schema和验证规则
-
-### 4. 工具集成
-
-通过执行器（Executor）模式集成各种开发运维工具：
-
-- **Git Executor**：执行代码克隆操作
-- **Maven Executor**：执行构建操作
-- **Terraform Executor**：执行基础设施部署
-- **可扩展性**：通过Executor接口可以轻松集成新的工具
-
-### 5. 资产依赖链
-
-系统维护完整的资产依赖关系：
-
-- **输入资产**：状态转换所需的输入资产（如构建需要源代码）
-- **输出资产**：状态转换生成的输出资产（如构建生成JAR文件）
-- **依赖追溯**：可以追溯每个资产的生成过程和依赖关系
-
-## 系统架构
-
-### 分层架构
+ALM 围绕两类 Stakeholder 设计，每类只需关注自己的领域：
 
 ```
-┌─────────────────────────────────────────┐
-│          Web UI (React)                 │
-│  - 状态机可视化                          │
-│  - 状态详情和操作                        │
-│  - 文件浏览                              │
-└─────────────────────────────────────────┘
-                    ↕
-┌─────────────────────────────────────────┐
-│          RESTful API (Gin)              │
-│  - 资产管理接口                          │
-│  - 状态转换接口                          │
-│  - 文件浏览接口                          │
-└─────────────────────────────────────────┘
-                    ↕
-┌─────────────────────────────────────────┐
-│          Application Layer              │
-│  ┌──────────────┐  ┌─────────────────┐ │
-│  │ AssetManager │  │ StateMachine    │ │
-│  │              │  │ Engine          │ │
-│  │ - 加载配置    │  │ - 状态转换      │ │
-│  │ - 状态持久化  │  │ - 规则验证      │ │
-│  │ - 资产管理    │  │ - 执行器调用    │ │
-│  └──────────────┘  └─────────────────┘ │
-│  ┌───────────────────────────────────┐ │
-│  │ Executor Factory                  │ │
-│  │ - Git Executor                    │ │
-│  │ - Maven Executor                  │ │
-│  │ - Terraform Executor              │ │
-│  └───────────────────────────────────┘ │
-└─────────────────────────────────────────┘
-                    ↕
-┌─────────────────────────────────────────┐
-│          Domain Layer                    │
-│  - SoftwareAsset (聚合根)                │
-│  - StateMachineTemplate                  │
-│  - State, StateTransition                │
-│  - ConcreteAsset, AssetType              │
-│  - Action, ActionExecutionResult         │
-└─────────────────────────────────────────┘
-                    ↕
-┌─────────────────────────────────────────┐
-│          DSL Layer                       │
-│  - webapp.yaml (状态机模板)              │
-│  - asset.yaml (应用配置)                  │
-│  - Parser (DSL解析器)                    │
-└─────────────────────────────────────────┘
+应用开发者                           基础设施运营者
+──────────────────────────           ──────────────────────────────────
+定义：应用由哪些服务组成               定义：服务运行在什么计算环境中
+定义：每个服务如何从代码变成制品         定义：需要哪些支撑服务（DB/Cache/MQ）
+关注：构建工具、依赖关系、制品类型       关注：资源规格、供给方式、网络拓扑、环境差异
 ```
 
-### 核心组件
+两者通过**可部署制品类型**（Deliverable）形成唯一接口契约：
 
-#### 1. Domain Layer（领域层）
+```
+Pipeline ──[produces]──► docker-image ◄──[accepts]── DeploymentEnv
+                               ↑
+                           契约接口（解析阶段校验类型匹配）
+```
 
-位于 `domain/` 目录，包含核心业务模型：
+开发者只管左边，运营者只管右边，系统在解析阶段校验两侧是否匹配，不等到运行时才报错。
 
-- **SoftwareAsset**：软件资产聚合根，管理资产的状态和转换
-- **StateMachineTemplate**：状态机模板，定义状态和转换规则
-- **State**：生命周期状态
-- **StateTransitionRule**：状态转换规则
-- **ConcreteAsset**：具体资产实体
-- **Action**：动作定义（工具动作/手动动作）
+---
 
-#### 2. DSL Layer（DSL层）
+### 三层 DSL 体系
 
-位于 `dsl/` 目录，提供配置化能力：
+#### Layer 1 — AppPipeline（应用开发者写）
 
-- **webapp.yaml**：Web应用的状态机模板定义
-- **Parser**：YAML DSL解析器，将DSL转换为领域模型
+描述"如何把源码变成可部署制品"，是一个**有向无环图（DAG）**，而非线性流水线。
 
-#### 3. Application Layer（应用层）
+- 支持多个 `deliverables`（出口），同一条流水线可以在 `jar-file` 处停止，也可以继续走到 `docker-image`
+- 部署环境通过 `accepts` 声明需要哪种形态，引擎按需规划执行路径，不多跑也不少跑
 
-位于 `internal/` 目录，包含应用服务：
+```yaml
+kind: AppPipeline
+name: java-webapp-pipeline
 
-- **manager/**：资产管理器
-  - `AssetManager`：管理单个应用的资产，加载配置和状态
-  - `AssetManagerFactory`：管理多个应用的资产管理器实例
-  - `asset_persistence.go`：状态持久化（保存到 `.alm-state.json`）
+stages:
+  - id: source-code
+    produces: source-code
+    action: { type: tool, command: git, args: [clone, "${repository}", "${outputDir}"] }
 
-- **engine/**：状态机引擎
-  - `StateMachineEngine`：执行状态转换，验证规则，调用执行器
+  - id: jar-file
+    requires: [source-code]
+    produces: jar-file
+    action: { type: tool, command: mvn, args: [clean, package, -DskipTests] }
 
-- **executor/**：工具执行器
-  - `GitExecutor`：执行git clone
-  - `MavenExecutor`：执行maven构建
-  - `TerraformExecutor`：执行terraform部署
-  - `ExecutorFactory`：创建执行器实例
+  - id: docker-image
+    requires: [jar-file]
+    produces: docker-image
+    action: { type: tool, command: docker, args: [build, -t, "${imageName}:${imageTag}", .] }
 
-- **api/**：Web API层
-  - RESTful API接口
-  - 文件浏览接口
-  - 工作空间管理接口
+deliverables: [jar-file, docker-image]   # 两个可能的出口
+```
 
-#### 4. Interface Layer（接口层）
+#### Layer 2 — AppArchitecture（应用开发者写）
 
-- **cmd/server/**：服务器入口，启动HTTP服务器
+描述"应用由哪些服务组成以及它们的依赖关系"，是**纯逻辑定义，与环境无关**。
 
-#### 5. Presentation Layer（表现层）
+- 每个服务声明使用哪条 Pipeline 模板和对应的代码仓库
+- `depends_on` 描述服务间的部署依赖，引擎通过拓扑排序决定执行顺序
+- 一份 AppArchitecture 可以对应多套 DeploymentEnv（dev / staging / prod）
 
-- **web/**：React前端应用
-  - 状态机可视化（使用vis-network）
-  - 状态详情和操作界面
-  - 文件浏览界面
-  - 执行结果模态框
+```yaml
+kind: AppArchitecture
+name: mall-platform
 
-### 数据流
+services:
+  - name: user-service
+    pipeline: java-webapp-pipeline
+    repository: https://github.com/example/user-service.git
 
-1. **状态转换流程**：
-   ```
-   用户触发转换 → API接收请求 → StateMachineEngine验证规则 
-   → 查找输入资产 → 调用Executor执行动作 → 创建输出资产 
-   → 更新状态 → 持久化状态 → 返回结果
-   ```
+  - name: order-service
+    pipeline: java-webapp-pipeline
+    repository: https://github.com/example/order-service.git
+    depends_on: [user-service]           # order 必须在 user 之后部署
+```
 
-2. **状态加载流程**：
-   ```
-   应用启动 → AssetManager加载asset.yaml → 加载状态机模板 
-   → 尝试加载.alm-state.json → 如果不存在则创建新资产 
-   → 返回当前状态
-   ```
+#### Layer 3 — DeploymentEnv（基础设施运营者写）
 
-3. **资产依赖链**：
-   ```
-   初始状态 → [git-clone] → 源代码资产 
-   → [maven-build] → JAR文件资产（依赖源代码）
-   → [terraform-deploy] → 容器资产（依赖JAR文件）
-   ```
+描述"在某个环境中如何运行这个应用"，包含**计算资源、支撑服务、网络**三个维度。
 
-## 功能特性
+**服务部署规格**：每个服务声明接受什么制品类型、运行在什么计算环境，以及资源量（CPU、内存、实例数）。
 
-- **领域模型驱动** - 基于DDD设计的核心领域模型
-- **状态机管理** - 可定制的状态机模板（DSL定义）
-- **工具集成** - 支持Git、Maven、Terraform等工具
-- **资产依赖链** - 完整的资产依赖关系追溯
-- **状态持久化** - 状态自动保存到文件，支持应用重启后恢复
-- **Web UI** - 可视化的状态机管理和操作界面
-- **文件浏览** - 在Web UI中浏览和查看workspace下的应用文件
-- **执行反馈** - 实时显示动作执行过程和结果
-- **RESTful API** - 完整的API接口
+**基础设施依赖**：声明需要哪些支撑服务（MySQL、Redis、Kafka 等），包含：
+- `type`：软件类型和版本
+- `provision`：如何供给（`docker` / `terraform` / `helm` / `external`）
+- `resources`：资源规格（CPU、内存、存储）
+- `config`：运行时参数（端口、数据库名等）
+
+**Bindings**：将支撑服务的连接信息注入到服务运行时环境变量，支持 `${infra.field}` 插值。
+
+**网络**：Ingress 定义，包含 IP/端口绑定、TLS 配置、路由规则及资源规格。
+
+```yaml
+kind: DeploymentEnv
+name: mall-dev
+environment: development
+app: mall-platform
+
+services:
+  - name: order-service
+    accepts: docker-image              # 与 pipeline deliverables 形成契约
+    compute:
+      type: docker-container
+      resources: { cpu: "1", memory: 512Mi, replicas: 1 }
+
+dependencies:
+  - name: mysql
+    type: mysql:8.0
+    provision:
+      via: docker                      # 本地开发用 Docker 供给
+      image: mysql:8.0
+      env: { MYSQL_ROOT_PASSWORD: secret }
+    resources: { cpu: "2", memory: 2Gi, storage: 20Gi }
+    config: { port: 3306, database: mall_dev }
+
+bindings:
+  - service: order-service
+    env:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://${mysql.host}:${mysql.config.port}/mall_orders"
+
+network:
+  ingress:
+    - name: public-gateway
+      type: nginx
+      bind: { ip: "0.0.0.0", http: 80, https: 443 }
+      routes:
+        - { path: /api/orders, service: order-service, port: 8080 }
+      resources: { cpu: "0.5", memory: 256Mi }
+```
+
+同一套 AppArchitecture，不同环境只需换一个 DeploymentEnv 文件：
+
+```
+deploy/
+  dev.yaml      ← 本地 Docker，小规格
+  staging.yaml  ← 云上测试，中等规格
+  prod.yaml     ← 生产 Kubernetes，高可用
+```
+
+---
+
+## 基础设施供给方式（provision.via）
+
+| via | 含义 |
+|-----|------|
+| `docker` | 引擎调用 Docker 启动容器，需提供 `image` |
+| `terraform` | 执行 Terraform 模块，需提供 `module` 路径 |
+| `helm` | Helm 安装 Chart，需提供 `chart` |
+| `external` | 已有实例，不做供给操作，需提供 `endpoint` |
+
+---
 
 ## 项目结构
 
 ```
 alm/
-├── domain/              # 领域模型（核心业务逻辑）
-│   ├── software_asset.go
-│   ├── state_machine_template.go
-│   ├── state.go
-│   ├── state_transition_rule.go
-│   ├── concrete_asset.go
-│   ├── action.go
-│   └── ...
-├── dsl/                 # 状态机DSL定义
-│   ├── webapp.yaml      # Web应用状态机模板
-│   └── parser.go        # DSL解析器
-├── internal/
-│   ├── manager/        # 资产管理器
-│   │   ├── asset_manager.go
-│   │   ├── asset_persistence.go
-│   │   └── manager_factory.go
-│   ├── engine/         # 状态机引擎
-│   │   └── state_machine_engine.go
-│   ├── executor/       # 工具执行器
-│   │   ├── factory.go
-│   │   ├── git_executor.go
-│   │   ├── maven_executor.go
-│   │   └── terraform_executor.go
-│   └── api/            # Web API
-│       ├── handler.go
-│       ├── router.go
-│       ├── workspace_handler.go
-│       └── file_handler.go
-├── cmd/server/         # 服务器入口
-│   └── main.go
-├── web/                # Web UI前端
-│   ├── src/
-│   │   ├── pages/      # 页面组件
-│   │   ├── components/ # UI组件
-│   │   └── services/   # API客户端
-│   └── dist/           # 构建输出
-└── workspace/          # 工作空间（应用目录）
-    └── spring-petclinic/
-        ├── asset.yaml           # 应用配置
-        ├── .alm-state.json      # 状态持久化文件
-        ├── source/              # 源代码目录
-        ├── build/               # 构建产物目录
-        └── deploy/              # 部署配置目录
+├── domain/                        # 领域模型
+│   ├── pipeline.go                # Pipeline、Stage、PipelineAction
+│   ├── app_architecture.go        # AppArchitecture、ServiceSpec（含拓扑排序）
+│   ├── deployment_env.go          # DeploymentEnv、InfraResource、InfraProvision、Binding、Network
+│   ├── resource.go                # ResourceSpec、VolumeSpec
+│   └── errors.go
+│
+├── dsl/                           # DSL 解析层
+│   ├── pipeline_parser.go         # 解析 AppPipeline YAML → domain.Pipeline
+│   ├── app_arch_parser.go         # 解析 AppArchitecture YAML → domain.AppArchitecture
+│   ├── deploy_env_parser.go       # 解析 DeploymentEnv YAML → domain.DeploymentEnv
+│   ├── loader.go                  # LoadPipelinesFromDir()
+│   ├── validator.go               # 跨模型一致性校验
+│   └── templates/                 # 内置 Pipeline 模板
+│       ├── java-webapp-pipeline.yaml
+│       └── nodejs-spa-pipeline.yaml
+│
+├── cmd/
+│   └── validate/main.go           # DSL 校验工具
+│
+└── workspace/                     # 应用工作目录
+    ├── spring-petclinic/          # 单服务示例（Java）
+    │   ├── app-arch.yaml
+    │   └── deploy/local.yaml
+    └── mall-platform/             # 多服务微服务示例
+        ├── app-arch.yaml
+        └── deploy/dev.yaml
 ```
+
+---
+
+## DSL 校验工具
+
+提供命令行工具用于在部署前验证三层 DSL 的一致性：
+
+```bash
+go run ./cmd/validate \
+  -arch      workspace/mall-platform/app-arch.yaml \
+  -deploy    workspace/mall-platform/deploy/dev.yaml \
+  -pipelines dsl/templates
+```
+
+输出示例：
+
+```
+Pipelines loaded (2):
+  ✓ java-webapp-pipeline  deliverables: [jar-file docker-image]
+  ✓ nodejs-spa-pipeline   deliverables: [static-bundle]
+
+AppArchitecture: mall-platform
+  Deployment order (4 services):
+    1. user-service      pipeline: java-webapp-pipeline   depends_on: none
+    2. product-service   pipeline: java-webapp-pipeline   depends_on: none
+    3. order-service     pipeline: java-webapp-pipeline   depends_on: [user-service product-service]
+    4. frontend          pipeline: nodejs-spa-pipeline    depends_on: [user-service product-service order-service]
+
+Validating...
+  ✓ All checks passed
+```
+
+校验内容包括：
+- `accepts` 的制品类型是否在对应 Pipeline 的 `deliverables` 中
+- `bindings` 和网络路由引用的服务是否在 AppArchitecture 中存在
+- 服务依赖图是否存在循环
+
+---
+
+## 当前状态与路线图
+
+| 层次 | 状态 |
+|------|------|
+| DSL 定义（三层模型） | ✅ 已完成 |
+| DSL 解析器 | ✅ 已完成 |
+| 跨模型校验 | ✅ 已完成 |
+| Pipeline 执行引擎（Build Phase） | 🚧 待实现 |
+| DeploymentEnv 执行引擎（Deploy Phase） | 🚧 待实现 |
+| 工具执行器（Git / Maven / Docker / Terraform） | 🚧 待实现 |
+| REST API | 🚧 待实现 |
+| Web 管理界面 | 🚧 待实现 |
+
+---
 
 ## 快速开始
 
-### 1. 构建前端
-
 ```bash
-cd web
-npm install
-npm run build
+# 克隆项目
+git clone <repo-url>
+cd alm
+
+# 验证示例应用（spring-petclinic）
+go run ./cmd/validate \
+  -arch      workspace/spring-petclinic/app-arch.yaml \
+  -deploy    workspace/spring-petclinic/deploy/local.yaml \
+  -pipelines dsl/templates
+
+# 验证多服务示例（mall-platform）
+go run ./cmd/validate \
+  -arch      workspace/mall-platform/app-arch.yaml \
+  -deploy    workspace/mall-platform/deploy/dev.yaml \
+  -pipelines dsl/templates
 ```
 
-### 2. 启动服务器（同时提供API和Web UI）
-
-```bash
-# 构建服务器
-go build -o bin/alm-server ./cmd/server/
-
-# 启动服务器（指定workspace根目录和web目录）
-./bin/alm-server -workspace ./workspace -web ./web -port 8081
-```
-
-### 3. 访问Web UI
-
-打开浏览器访问 `http://localhost:8081`
-
-**注意**：如果不需要Web UI，可以省略 `-web` 参数，服务器将只提供API服务。
-
-## 配置说明
-
-### 应用配置（asset.yaml）
-
-每个应用在workspace下需要创建 `asset.yaml` 配置文件：
-
-```yaml
-id: petclinic-001
-name: Spring PetClinic
-description: Spring Framework示例应用
-state_machine_template: ../dsl/webapp.yaml  # 状态机模板路径
-
-workspace:
-  source_dir: source
-  build_dir: build
-  deploy_dir: deploy
-  assets_dir: assets
-
-application:
-  git:
-    repository: https://github.com/spring-projects/spring-petclinic.git
-  maven:
-    build_command: mvn clean package
-  terraform:
-    provider: docker
-```
-
-### 状态机模板（webapp.yaml）
-
-定义应用的生命周期状态机：
-
-```yaml
-name: webapp-lifecycle
-description: Web应用的标准生命周期状态机模板
-
-asset_types:
-  - id: source-code
-    name: 源代码
-    description: Git仓库克隆的源代码
-
-states:
-  - id: initial
-    name: 初始状态
-    description: 应用初始状态
-
-transitions:
-  - from: initial
-    to: source-code
-    action: git-clone
-    conditions:
-      repository: required
-    input_asset_types: []
-    generated_asset_types:
-      - source-code
-```
-
-## API文档
-
-详见 [API.md](./API.md)
-
-## 使用示例
-
-### 创建新应用
-
-1. 在 `workspace/` 目录下创建应用目录
-2. 创建 `asset.yaml` 配置文件
-3. 在Web UI中即可看到新应用
-
-### 执行状态转换
-
-通过Web UI或API执行状态转换：
-
-```bash
-curl -X POST http://localhost:8081/api/v1/asset/transition?appPath=spring-petclinic \
-  -H "Content-Type: application/json" \
-  -d '{
-    "toState": "source-code",
-    "conditions": {
-      "repository": "https://github.com/spring-projects/spring-petclinic.git"
-    },
-    "operator": "admin"
-  }'
-```
-
-### 浏览应用文件
-
-在Web UI中，选择应用后切换到"文件浏览"标签页，可以：
-- 浏览应用目录结构
-- 查看文件内容
-- 导航到子目录
-
-也可以通过API访问：
-
-```bash
-# 列出应用根目录文件
-curl "http://localhost:8081/api/v1/files?appPath=spring-petclinic&path="
-
-# 查看文件内容
-curl "http://localhost:8081/api/v1/files/content?appPath=spring-petclinic&path=asset.yaml"
-```
-
-## 扩展开发
-
-### 添加新的执行器
-
-1. 在 `internal/executor/` 目录下创建新的执行器，实现 `Executor` 接口
-2. 在 `ExecutorFactory` 中注册新执行器
-3. 在DSL中定义对应的动作
-
-示例：
-
-```go
-// internal/executor/custom_executor.go
-type CustomExecutor struct {
-    // ...
-}
-
-func (e *CustomExecutor) Execute(ctx *engine.ExecutionContext) (*engine.ExecutionResult, error) {
-    // 实现执行逻辑
-}
-```
-
-### 定义新的状态机模板
-
-1. 创建新的YAML文件（如 `microservice.yaml`）
-2. 定义资产类型、状态和转换规则
-3. 在应用的 `asset.yaml` 中引用新模板
-
-## 开发
-
-### 后端开发
-
-```bash
-# 运行测试
-go test ./...
-
-# 构建
-go build ./...
-```
-
-### 前端开发
-
-```bash
-cd web
-npm run dev
-```
+---
 
 ## 许可证
 

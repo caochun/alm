@@ -1,0 +1,27 @@
+kind: AppArchitecture
+name: mall-platform
+description: 电商平台 - 微服务架构示例
+
+services:
+  - name: user-service
+    pipeline: java-webapp-pipeline
+    repository: https://github.com/example/mall-user-service.git
+
+  - name: product-service
+    pipeline: java-webapp-pipeline
+    repository: https://github.com/example/mall-product-service.git
+
+  - name: order-service
+    pipeline: java-webapp-pipeline
+    repository: https://github.com/example/mall-order-service.git
+    depends_on:
+      - user-service
+      - product-service
+
+  - name: frontend
+    pipeline: nodejs-spa-pipeline
+    repository: https://github.com/example/mall-frontend.git
+    depends_on:
+      - user-service
+      - product-service
+      - order-service

@@ -1,0 +1,56 @@
+kind: DeploymentEnv
+name: petclinic-local
+environment: local
+app: spring-petclinic
+
+services:
+  - name: petclinic
+    accepts: docker-image
+    compute:
+      type: docker-container
+      resources:
+        cpu: "1"
+        memory: 512Mi
+        replicas: 1
+      ports:
+        - 8080
+
+dependencies:
+  - name: mysql
+    type: mysql:8.0
+    provision:
+      via: docker
+      image: mysql:8.0
+      env:
+        MYSQL_ROOT_PASSWORD: petclinic
+        MYSQL_DATABASE: petclinic
+    resources:
+      cpu: "1"
+      memory: 1Gi
+      storage: 5Gi
+    config:
+      port: 3306
+      database: petclinic
+
+bindings:
+  - service: petclinic
+    env:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://${mysql.host}:${mysql.config.port}/${mysql.config.database}"
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: petclinic
+      SPRING_PROFILES_ACTIVE: mysql
+
+network:
+  ingress:
+    - name: local-gateway
+      type: nginx
+      bind:
+        ip: "127.0.0.1"
+        http: 8081
+      routes:
+        - path: /
+          service: petclinic
+          port: 8080
+      resources:
+        cpu: "0.1"
+        memory: 64Mi

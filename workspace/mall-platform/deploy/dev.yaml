@@ -1,0 +1,137 @@
+kind: DeploymentEnv
+name: mall-dev
+environment: development
+app: mall-platform
+
+services:
+  - name: user-service
+    accepts: docker-image
+    compute:
+      type: docker-container
+      resources:
+        cpu: "1"
+        memory: 512Mi
+        replicas: 1
+      ports:
+        - 8080
+
+  - name: product-service
+    accepts: docker-image
+    compute:
+      type: docker-container
+      resources:
+        cpu: "1"
+        memory: 512Mi
+        replicas: 1
+      ports:
+        - 8080
+
+  - name: order-service
+    accepts: docker-image
+    compute:
+      type: docker-container
+      resources:
+        cpu: "1"
+        memory: 512Mi
+        replicas: 1
+      ports:
+        - 8080
+
+  - name: frontend
+    accepts: static-bundle
+    compute:
+      type: nginx-static
+      resources:
+        cpu: "0.5"
+        memory: 128Mi
+      ports:
+        - 80
+
+dependencies:
+  - name: mysql
+    type: mysql:8.0
+    provision:
+      via: docker
+      image: mysql:8.0
+      env:
+        MYSQL_ROOT_PASSWORD: mall_secret
+        MYSQL_DATABASE: mall_dev
+    resources:
+      cpu: "2"
+      memory: 2Gi
+      storage: 20Gi
+    config:
+      port: 3306
+      database: mall_dev
+
+  - name: redis
+    type: redis:7
+    provision:
+      via: docker
+      image: redis:7-alpine
+    resources:
+      memory: 1Gi
+    config:
+      port: 6379
+
+  - name: kafka
+    type: kafka:3.6
+    provision:
+      via: docker
+      image: confluentinc/cp-kafka:7.5.0
+      env:
+        KAFKA_KRAFT_MODE: "true"
+        KAFKA_PROCESS_ROLES: broker,controller
+        KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+    resources:
+      cpu: "2"
+      memory: 4Gi
+      storage: 50Gi
+    config:
+      port: 9092
+
+bindings:
+  - service: user-service
+    env:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://${mysql.host}:${mysql.config.port}/mall_users"
+      SPRING_REDIS_HOST: "${redis.host}"
+      SPRING_REDIS_PORT: "${redis.config.port}"
+
+  - service: product-service
+    env:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://${mysql.host}:${mysql.config.port}/mall_products"
+      SPRING_REDIS_HOST: "${redis.host}"
+
+  - service: order-service
+    env:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://${mysql.host}:${mysql.config.port}/mall_orders"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: "${kafka.host}:${kafka.config.port}"
+
+network:
+  ingress:
+    - name: public-gateway
+      type: nginx
+      bind:
+        ip: "0.0.0.0"
+        http: 80
+        https: 443
+      tls:
+        cert: /etc/ssl/certs/mall.crt
+        key: /etc/ssl/private/mall.key
+      routes:
+        - path: /
+          service: frontend
+          port: 80
+        - path: /api/users
+          service: user-service
+          port: 8080
+        - path: /api/products
+          service: product-service
+          port: 8080
+        - path: /api/orders
+          service: order-service
+          port: 8080
+      resources:
+        cpu: "0.5"
+        memory: 256Mi

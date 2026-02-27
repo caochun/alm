@@ -1,0 +1,8 @@
+kind: AppArchitecture
+name: spring-petclinic
+description: Spring PetClinic - Spring Framework 宠物诊所示例应用（单服务）
+
+services:
+  - name: petclinic
+    pipeline: java-webapp-pipeline
+    repository: https://github.com/spring-projects/spring-petclinic.git

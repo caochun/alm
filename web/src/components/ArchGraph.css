@@ -1,0 +1,159 @@
+.arch-graph-wrap {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  cursor: grab;
+  user-select: none;
+}
+
+.arch-graph-wrap:active {
+  cursor: grabbing;
+}
+
+.arch-graph-svg {
+  display: block;
+}
+
+/* ── Column headers ── */
+.col-header {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  fill: #888;
+}
+
+/* ── Node cards (rendered inside foreignObject) ── */
+.node-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  cursor: move;
+}
+
+.node-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+/* Service node — blue */
+.node-service {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+.node-service .node-title {
+  color: #1d4ed8;
+}
+
+/* Deliverable node — amber */
+.node-deliverable {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.node-deliverable .node-title {
+  color: #92400e;
+}
+
+/* Compute node — green */
+.node-compute {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+.node-compute .node-title {
+  color: #15803d;
+}
+
+/* Infra node — purple */
+.node-infra {
+  background: #faf5ff;
+  border-color: #c4b5fd;
+}
+.node-infra .node-title {
+  color: #6d28d9;
+}
+
+/* Ingress node — orange */
+.node-ingress {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+.node-ingress .node-title {
+  color: #c2410c;
+}
+
+.node-title {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+  width: fit-content;
+}
+
+.node-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-row .label {
+  color: #999;
+  flex-shrink: 0;
+}
+
+.node-row .value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-routes {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #777;
+}
+
+.node-routes div {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Artifact icon ── */
+.artifact-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.artifact-type {
+  font-size: 12px;
+  font-weight: 700;
+  color: #92400e;
+}
+.artifact-pipeline {
+  font-size: 10px;
+  color: #b45309;
+}

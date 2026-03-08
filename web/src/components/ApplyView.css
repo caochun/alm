@@ -1,0 +1,154 @@
+.apply-view {
+  padding: 24px 32px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* ── Progress bars ── */
+.apply-progress {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.progress-item {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.progress-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: #374151;
+}
+
+.progress-count {
+  font-size: 12px;
+  color: #6b7280;
+  font-family: 'SF Mono', 'Menlo', monospace;
+}
+
+.progress-bar {
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* ── Error ── */
+.apply-error {
+  padding: 10px 14px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+/* ── Steps ── */
+.apply-phase-group {
+  margin-bottom: 12px;
+}
+
+.apply-phase-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #9ca3af;
+  padding: 6px 0;
+}
+
+.apply-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.apply-step:hover {
+  background: #f9fafb;
+}
+
+.apply-step-tag {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.apply-step-desc {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 12px;
+  color: #374151;
+}
+
+.apply-step-skipped .apply-step-desc {
+  color: #9ca3af;
+}
+
+.apply-step-failed .apply-step-desc {
+  color: #dc2626;
+}
+
+.apply-step-succeeded .apply-step-desc {
+  color: #15803d;
+}
+
+.apply-step-detail {
+  margin: 2px 0 8px 32px;
+  border-left: 2px solid #e5e7eb;
+  padding-left: 12px;
+}
+
+.step-output {
+  font-size: 11px;
+  color: #6b7280;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+.step-error-text {
+  font-size: 11px;
+  color: #dc2626;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+}
+
+/* ── Actions ── */
+.apply-actions {
+  padding-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.apply-empty {
+  padding: 60px 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}

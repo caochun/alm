@@ -1,0 +1,204 @@
+.plan-view {
+  padding: 24px 32px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.plan-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.plan-error {
+  padding: 10px 14px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.plan-header {
+  font-size: 15px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* ── Phase ── */
+.plan-phase {
+  margin-bottom: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f9fafb;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+}
+
+.phase-header:hover {
+  background: #f3f4f6;
+}
+
+.phase-header.has-pending {
+  background: #eff6ff;
+}
+
+.phase-toggle {
+  color: #9ca3af;
+  font-size: 12px;
+  width: 12px;
+}
+
+.phase-name {
+  font-weight: 700;
+  text-transform: capitalize;
+  color: #1f2937;
+}
+
+.phase-count {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.phase-badge {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.phase-badge.pending {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.phase-badge.skipped {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* ── Steps ── */
+.phase-steps {
+  border-top: 1px solid #e5e7eb;
+}
+
+.step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 28px;
+  font-size: 13px;
+  color: #374151;
+}
+
+.step-row:not(:last-child) {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.step-row.step-skipped {
+  color: #9ca3af;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.step-desc {
+  flex: 1;
+  font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+}
+
+.step-tag {
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Summary ── */
+.plan-summary {
+  display: flex;
+  gap: 20px;
+  padding: 14px 0;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.summary-item strong {
+  color: #1f2937;
+}
+
+.plan-actions {
+  padding-top: 8px;
+}
+
+.plan-uptodate {
+  padding: 16px 0;
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.plan-empty {
+  padding: 60px 0;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+/* ── Shared buttons ── */
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-outline {
+  background: #fff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.btn-lg {
+  padding: 10px 24px;
+  font-size: 14px;
+}

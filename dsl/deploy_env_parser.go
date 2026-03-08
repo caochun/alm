@@ -3,6 +3,7 @@ package dsl
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/alm/domain"
 	"gopkg.in/yaml.v3"
@@ -202,6 +203,94 @@ func parseDeployEnvBytes(data []byte, source string) (*domain.DeploymentEnv, err
 	}
 
 	return env, nil
+}
+
+// WriteDeploymentEnv serializes a domain.DeploymentEnv to YAML and writes
+// it to the given path. The output is validated via round-trip parsing.
+func WriteDeploymentEnv(path string, env *domain.DeploymentEnv) error {
+	d := deployEnvDSL{
+		Kind:        "DeploymentEnv",
+		Name:        env.Name,
+		Environment: env.Environment,
+		App:         env.App,
+	}
+
+	for _, svc := range env.Services {
+		sd := serviceDeployDSL{Name: svc.Name, Accepts: svc.Accepts}
+		if svc.Compute != nil {
+			sd.Compute = &computeDSL{
+				Type:  svc.Compute.Type,
+				Ports: svc.Compute.Ports,
+			}
+			if svc.Compute.Resources != nil {
+				sd.Compute.Resources = &resourceDSL{
+					CPU: svc.Compute.Resources.CPU, Memory: svc.Compute.Resources.Memory,
+					Storage: svc.Compute.Resources.Storage, Replicas: svc.Compute.Resources.Replicas,
+				}
+			}
+			for _, v := range svc.Compute.Volumes {
+				sd.Compute.Volumes = append(sd.Compute.Volumes, volumeDSL{Name: v.Name, Size: v.Size, Mount: v.Mount})
+			}
+		}
+		d.Services = append(d.Services, sd)
+	}
+
+	for _, dep := range env.Dependencies {
+		ir := infraResDSL{Name: dep.Name, Type: dep.Type, Config: dep.Config}
+		if dep.Resources != nil {
+			ir.Resources = &resourceDSL{
+				CPU: dep.Resources.CPU, Memory: dep.Resources.Memory,
+				Storage: dep.Resources.Storage, Replicas: dep.Resources.Replicas,
+			}
+		}
+		if dep.Provision != nil {
+			ir.Provision = &provisionDSL{
+				Via: string(dep.Provision.Via), Image: dep.Provision.Image, Env: dep.Provision.Env,
+				Module: dep.Provision.Module, Vars: dep.Provision.Vars,
+				Chart: dep.Provision.Chart, Values: dep.Provision.Values,
+				Endpoint: dep.Provision.Endpoint,
+			}
+		}
+		d.Dependencies = append(d.Dependencies, ir)
+	}
+
+	for _, b := range env.Bindings {
+		d.Bindings = append(d.Bindings, bindingDSL{Service: b.Service, Env: b.Env})
+	}
+
+	if env.Network != nil && len(env.Network.Ingress) > 0 {
+		d.Network = &networkDSL{}
+		for _, ing := range env.Network.Ingress {
+			ig := ingressDSL{Name: ing.Name, Type: ing.Type}
+			if ing.Bind != nil {
+				ig.Bind = &bindDSL{IP: ing.Bind.IP, HTTP: ing.Bind.HTTP, HTTPS: ing.Bind.HTTPS}
+			}
+			if ing.TLS != nil {
+				ig.TLS = &tlsDSL{Cert: ing.TLS.Cert, Key: ing.TLS.Key}
+			}
+			if ing.Resources != nil {
+				ig.Resources = &resourceDSL{CPU: ing.Resources.CPU, Memory: ing.Resources.Memory}
+			}
+			for _, r := range ing.Routes {
+				ig.Routes = append(ig.Routes, routeDSL{Path: r.Path, Service: r.Service, Port: r.Port})
+			}
+			d.Network.Ingress = append(d.Network.Ingress, ig)
+		}
+	}
+
+	data, err := yaml.Marshal(&d)
+	if err != nil {
+		return fmt.Errorf("marshal deployment env: %w", err)
+	}
+
+	if _, err := parseDeployEnvBytes(data, path); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create directory: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 // ---- helpers ---------------------------------------------------------------

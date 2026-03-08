@@ -1,12 +1,169 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ALM — 应用生命周期管理</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ALM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .arch-wrap { cursor: grab; user-select: none; }
+    .arch-wrap:active { cursor: grabbing; }
+    .node-card { cursor: move; transition: box-shadow 0.15s; }
+    .node-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  </style>
+</head>
+<body class="bg-white text-gray-900 h-screen flex flex-col overflow-hidden">
+
+  <!-- Navbar -->
+  <nav class="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-white shrink-0">
+    <div class="flex items-center gap-6">
+      <h1 class="text-lg font-semibold text-gray-900">ALM</h1>
+      <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">App</label>
+        <select id="sel-app" class="rounded-md border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></select>
+      </div>
+      <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">Env</label>
+        <select id="sel-env" class="rounded-md border-gray-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500 min-w-[120px]" disabled></select>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-new-app" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">+ New App</button>
+      <button id="btn-edit-arch" class="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Edit Arch</button>
+      <div class="w-px h-5 bg-gray-300"></div>
+      <button id="btn-new-env" class="inline-flex items-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">+ New Env</button>
+      <button id="btn-edit-env" class="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Edit Env</button>
+    </div>
+  </nav>
+
+  <!-- Tab bar -->
+  <div class="border-b border-gray-200 bg-white shrink-0">
+    <nav class="flex gap-x-8 px-6" id="tab-bar">
+      <button class="tab-btn border-b-2 border-indigo-500 py-3 text-sm font-semibold text-indigo-600" data-tab="architecture">Architecture</button>
+      <button class="tab-btn border-b-2 border-transparent py-3 text-sm font-semibold text-gray-500 hover:border-gray-300 hover:text-gray-700" data-tab="plan">Plan</button>
+      <button class="tab-btn border-b-2 border-transparent py-3 text-sm font-semibold text-gray-500 hover:border-gray-300 hover:text-gray-700" data-tab="apply">Apply</button>
+      <button class="tab-btn border-b-2 border-transparent py-3 text-sm font-semibold text-gray-500 hover:border-gray-300 hover:text-gray-700" data-tab="state">State</button>
+    </nav>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1 overflow-auto relative bg-gray-50" id="content">
+    <!-- Architecture -->
+    <div id="tab-architecture" class="tab-pane w-full h-full">
+      <div id="graph-msg" class="flex items-center justify-center h-full text-gray-500 text-sm">Select an app and environment</div>
+      <div id="graph-wrap" class="arch-wrap w-full h-full overflow-auto hidden"></div>
+    </div>
+    <!-- Plan -->
+    <div id="tab-plan" class="tab-pane hidden">
+      <div class="mx-auto max-w-3xl px-6 py-8">
+        <div class="flex items-center gap-3 mb-6">
+          <button id="btn-plan" class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500">Generate Plan</button>
+          <button id="btn-plan-force" class="inline-flex items-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Force Regenerate</button>
+        </div>
+        <div id="plan-error" class="hidden rounded-md bg-red-50 p-4 mb-6 text-sm text-red-700"></div>
+        <div id="plan-body"></div>
+        <div id="plan-empty" class="py-16 text-center text-gray-500 text-sm">Click "Generate Plan" to see what will be executed.</div>
+      </div>
+    </div>
+    <!-- Apply -->
+    <div id="tab-apply" class="tab-pane hidden">
+      <div class="mx-auto max-w-3xl px-6 py-8">
+        <div id="apply-bars" class="grid grid-cols-4 gap-4 mb-8"></div>
+        <div id="apply-error" class="hidden rounded-md bg-red-50 p-4 mb-6 text-sm text-red-700"></div>
+        <div id="apply-steps"></div>
+        <div id="apply-actions" class="pt-6 flex gap-3"></div>
+        <div id="apply-empty" class="py-16 text-center text-gray-500 text-sm">No plan available. Generate a plan first.</div>
+      </div>
+    </div>
+    <!-- State -->
+    <div id="tab-state" class="tab-pane hidden">
+      <div class="mx-auto max-w-3xl px-6 py-8">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-base font-semibold text-gray-900">Reported State</h2>
+          <button id="btn-state-refresh" class="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">Refresh</button>
+        </div>
+        <div id="state-time" class="text-sm text-gray-500 mb-6"></div>
+        <div id="state-body"></div>
+        <div id="state-empty" class="py-16 text-center text-gray-500 text-sm"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ Architecture Editor Overlay ═══ -->
+  <div id="arch-editor-overlay" class="fixed inset-0 z-50 hidden flex flex-col bg-white">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+      <h2 id="arch-editor-title" class="text-base font-semibold text-gray-900">New Application</h2>
+      <button onclick="closeArchEditor()" class="text-gray-400 hover:text-gray-500">
+        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg>
+      </button>
+    </div>
+    <!-- Body: 3-column layout -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Left: Service Templates -->
+      <div class="w-56 border-r border-gray-200 bg-white flex flex-col shrink-0">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Service Templates</h3>
+        </div>
+        <div id="arch-template-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+      </div>
+      <!-- Center: Canvas -->
+      <div class="flex-1 overflow-hidden bg-gray-50 relative">
+        <div id="arch-canvas-wrap" class="w-full h-full overflow-auto cursor-grab" style="user-select:none"></div>
+      </div>
+      <!-- Right: Properties -->
+      <div class="w-72 border-l border-gray-200 bg-white flex flex-col shrink-0">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Properties</h3>
+        </div>
+        <div id="arch-props-panel" class="flex-1 overflow-y-auto p-4">
+          <p class="text-sm text-gray-400 text-center py-8">Click a service node to edit</p>
+        </div>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div id="arch-editor-footer" class="flex items-center px-4 py-3 border-t border-gray-200 bg-gray-50 shrink-0"></div>
+  </div>
+
+  <!-- ═══ Deploy Editor Overlay ═══ -->
+  <div id="deploy-editor-overlay" class="fixed inset-0 z-50 hidden flex flex-col bg-white">
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+      <h2 id="deploy-editor-title" class="text-base font-semibold text-gray-900">New Environment</h2>
+      <button onclick="closeDeployEditor()" class="text-gray-400 hover:text-gray-500">
+        <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z"/></svg>
+      </button>
+    </div>
+    <!-- Body: 3-column layout -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Left: Service Config -->
+      <div class="w-80 border-r border-gray-200 bg-white flex flex-col shrink-0">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Services</h3>
+        </div>
+        <div id="deploy-service-list" class="flex-1 overflow-y-auto p-4"></div>
+      </div>
+      <!-- Center: Canvas -->
+      <div class="flex-1 overflow-hidden bg-gray-50 relative">
+        <div id="deploy-canvas-wrap" class="w-full h-full overflow-auto cursor-grab" style="user-select:none"></div>
+        <!-- Config modal (centered over canvas) -->
+        <div id="deploy-config-modal" class="absolute inset-0 bg-black/30 hidden flex items-center justify-center z-10"></div>
+      </div>
+      <!-- Right: Infra Templates -->
+      <div class="w-56 border-l border-gray-200 bg-white flex flex-col shrink-0">
+        <div class="px-4 py-3 border-b border-gray-100">
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500">Infrastructure</h3>
+        </div>
+        <div id="deploy-infra-list" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div id="deploy-editor-footer" class="flex items-center px-4 py-3 border-t border-gray-200 bg-gray-50 shrink-0"></div>
+  </div>
+
+  <script src="editor-shared.js"></script>
+  <script src="arch-editor.js"></script>
+  <script src="deploy-editor.js"></script>
+  <script src="app.js"></script>
+</body>
 </html>

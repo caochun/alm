@@ -3,6 +3,7 @@ package dsl
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/alm/domain"
 	"gopkg.in/yaml.v3"
@@ -90,4 +91,36 @@ func parseAppArchBytes(data []byte, source string) (*domain.AppArchitecture, err
 	}
 
 	return arch, nil
+}
+
+// WriteAppArchitecture serializes a domain.AppArchitecture to YAML and writes
+// it to the given path. The output is validated via round-trip parsing.
+func WriteAppArchitecture(path string, arch *domain.AppArchitecture) error {
+	d := appArchDSL{
+		Kind:        "AppArchitecture",
+		Name:        arch.Name,
+		Description: arch.Description,
+	}
+	for _, svc := range arch.Services {
+		d.Services = append(d.Services, serviceSpecDSL{
+			Name:       svc.Name,
+			Pipeline:   svc.Pipeline,
+			Repository: svc.Repository,
+			DependsOn:  svc.DependsOn,
+		})
+	}
+
+	data, err := yaml.Marshal(&d)
+	if err != nil {
+		return fmt.Errorf("marshal app architecture: %w", err)
+	}
+
+	if _, err := parseAppArchBytes(data, path); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("create directory: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
 }

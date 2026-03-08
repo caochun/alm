@@ -48,6 +48,7 @@ var bindingRefRe = regexp.MustCompile(`\$\{(\w[\w-]*)\.[^}]+\}`)
 
 // BuildGraph constructs GraphData from the three DSL models.
 // pipelines may be nil (only used to look up pipeline names).
+// env may be nil — in that case only architecture nodes (services, deliverables, dependencies) are returned.
 func BuildGraph(
 	arch *domain.AppArchitecture,
 	env *domain.DeploymentEnv,
@@ -98,8 +99,11 @@ func BuildGraph(
 	for _, svc := range ordered {
 		y := svcY[svc.Name]
 
-		// find deploy spec for this service
-		deploySpec := env.FindServiceSpec(svc.Name)
+		// find deploy spec for this service (nil-safe when env is nil)
+		var deploySpec *domain.ServiceDeploySpec
+		if env != nil {
+			deploySpec = env.FindServiceSpec(svc.Name)
+		}
 		artifactType := ""
 		if deploySpec != nil {
 			artifactType = deploySpec.Accepts
@@ -169,6 +173,11 @@ func BuildGraph(
 				Label:  via,
 			})
 		}
+	}
+
+	// When env is nil, skip infra/ingress/binding/route sections
+	if env == nil {
+		return GraphData{Nodes: nodes, Edges: edges}
 	}
 
 	// ----- column 4: Infra nodes -----
